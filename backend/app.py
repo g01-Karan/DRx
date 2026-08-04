@@ -2,9 +2,9 @@
 ==============================================================================
 AI Bone Fracture Detection — Flask Web Application Backend
 ==============================================================================
-Senior AI Engineer Implementation incorporating:
+Production-ready backend API featuring:
 - MobileNetV2 Trained Bone Fracture CNN Classifier
-- Grad-CAM Keras 3 Heatmap Activation Engine
+- Grad-CAM Heatmap Activation Engine
 - SQLite Prediction History with CSV/PDF Exports
 - ANN Healing Time Estimator Model
 - Rehabilitation & Recovery Recommendations Engine
@@ -17,7 +17,6 @@ import sys
 import time
 import numpy as np
 import tensorflow as tf
-from PIL import Image
 from flask import Flask, render_template, request, jsonify, send_from_directory
 
 # Suppress verbose C++ TensorFlow log messages
@@ -26,14 +25,31 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # Base Root Directory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Add model and service paths to sys.path for clean modular imports
+# Modular Sys Path Extensions
 sys.path.extend([
+    BASE_DIR,
+    os.path.join(BASE_DIR, 'backend'),
+    os.path.join(BASE_DIR, 'backend', 'config'),
     os.path.join(BASE_DIR, 'backend', 'routes'),
     os.path.join(BASE_DIR, 'backend', 'services'),
+    os.path.join(BASE_DIR, 'backend', 'utils'),
+    os.path.join(BASE_DIR, 'backend', 'middleware'),
     os.path.join(BASE_DIR, 'models', 'cnn'),
     os.path.join(BASE_DIR, 'models', 'ann'),
     os.path.join(BASE_DIR, 'models', 'ml'),
 ])
+
+# Import Config, Middleware, & Utilities
+from backend.config.settings import (
+    SECRET_KEY, DEBUG, PORT, STATIC_FOLDER, TEMPLATE_FOLDER,
+    LANDING_FOLDER, AUTH_FOLDER, UPLOAD_FOLDER, SAVED_CNN_MODEL_PATH,
+    MAX_CONTENT_LENGTH
+)
+from backend.middleware.cors import init_cors_middleware
+from backend.utils.helpers import (
+    allowed_file, sanitize_filename, preprocess_image,
+    compute_severity, compute_suggestion, compute_emergency_level
+)
 
 # Imports from modular packages
 from history import history_bp, save_prediction, init_db
@@ -42,106 +58,60 @@ from healing_model import load_healing_model, predict_healing_time_ann
 from rehabilitation import get_rehabilitation_plan
 from doctors_data import get_nearby_doctors
 
-# Folder Paths
-STATIC_FOLDER = os.path.join(BASE_DIR, 'frontend', 'static')
-TEMPLATE_FOLDER = os.path.join(BASE_DIR, 'frontend', 'templates')
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'backend', 'uploads')
-SAVED_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'cnn', 'best_model.keras')
-
 # Initialize Flask App
 app = Flask(__name__, static_folder=STATIC_FOLDER, template_folder=TEMPLATE_FOLDER)
+app.secret_key = SECRET_KEY
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
-# Register Blueprints
+# Register Blueprints & Middleware
 app.register_blueprint(history_bp)
+init_cors_middleware(app)
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload limit
-
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'webp'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Initialize Database
 init_db()
 
-# Load Models
-print(f"Loading trained CNN model from {SAVED_MODEL_PATH}...")
-cnn_model = tf.keras.models.load_model(SAVED_MODEL_PATH)
-print("CNN Model loaded successfully!")
-
-healing_ann_model = load_healing_model()
+# Lazy Model Loader References
+_cnn_model = None
+_healing_ann_model = None
 
 
-# ==============================================================================
-# HELPER FUNCTIONS
-# ==============================================================================
-def preprocess_image(image_path, target_size=(224, 224)):
-    """Preprocess image for CNN model."""
-    img = Image.open(image_path).convert('RGB')
-    img = img.resize(target_size)
-    img_array = np.array(img, dtype=np.float32) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    return img_array
+def get_cnn_model():
+    """Lazy load CNN model for fast cold starts."""
+    global _cnn_model
+    if _cnn_model is None:
+        if os.path.exists(SAVED_CNN_MODEL_PATH):
+            print(f"Loading trained CNN model from {SAVED_CNN_MODEL_PATH}...")
+            _cnn_model = tf.keras.models.load_model(SAVED_CNN_MODEL_PATH)
+            print("CNN Model loaded successfully!")
+        else:
+            print(f"Warning: CNN Model file not found at {SAVED_CNN_MODEL_PATH}")
+    return _cnn_model
 
 
-def compute_severity(confidence, prediction):
-    """Compute severity level based on prediction and confidence score."""
-    if prediction == 'Not Fractured':
-        return 'N/A'
-
-    if confidence < 70.0:
-        return 'Low'
-    elif confidence < 85.0:
-        return 'Moderate'
-    elif confidence < 95.0:
-        return 'High'
-    else:
-        return 'Critical'
-
-
-def compute_suggestion(severity, prediction):
-    """Generate clinical AI suggestion based on diagnosis."""
-    if prediction == 'Not Fractured':
-        return 'No fracture detected. Normal bone structure observed. Follow up if pain persists.'
-
-    suggestions = {
-        'Low': 'Mild/Hairline fracture suspected. Rest, ice, and consult an orthopedic specialist for X-ray confirmation.',
-        'Moderate': 'Moderate fracture detected. Orthopedic consultation recommended within 24-48 hours. Immobilize the affected area.',
-        'High': 'Significant fracture detected. Prompt orthopedic consultation strongly recommended. Avoid putting weight on the affected area.',
-        'Critical': 'Severe fracture detected. Immediate emergency orthopedic consultation required. Seek medical attention immediately.'
-    }
-    return suggestions.get(severity, suggestions['Moderate'])
-
-
-def compute_emergency_level(severity, prediction):
-    """Compute emergency level from severity."""
-    if prediction == 'Not Fractured':
-        return 'None'
-
-    emergency_map = {
-        'Low': 'Low',
-        'Moderate': 'Medium',
-        'High': 'High',
-        'Critical': 'High'
-    }
-    return emergency_map.get(severity, 'Medium')
+def get_ann_model():
+    """Lazy load ANN Healing model for fast cold starts."""
+    global _healing_ann_model
+    if _healing_ann_model is None:
+        _healing_ann_model = load_healing_model()
+    return _healing_ann_model
 
 
 # ==============================================================================
-# FLASK ROUTES
+# FLASK PAGE ROUTES
 # ==============================================================================
 @app.route("/")
 def landing():
     """Render the Landing Page."""
-    return send_from_directory(os.path.join(BASE_DIR, 'frontend', 'landing'), 'index.html')
+    return send_from_directory(LANDING_FOLDER, 'index.html')
 
 
 @app.route("/login")
 def login_page():
     """Render the Login & Auth Page."""
-    return send_from_directory(os.path.join(BASE_DIR, 'frontend', 'auth'), 'login.html')
+    return send_from_directory(AUTH_FOLDER, 'login.html')
 
 
 @app.route("/dashboard")
@@ -153,43 +123,40 @@ def dashboard_page():
 @app.route("/landing/<path:filename>")
 def serve_landing_assets(filename):
     """Serve static assets for Landing Page."""
-    return send_from_directory(os.path.join(BASE_DIR, 'frontend', 'landing'), filename)
+    return send_from_directory(LANDING_FOLDER, filename)
 
 
 @app.route("/auth/<path:filename>")
 def serve_auth_assets(filename):
     """Serve static assets for Auth Page."""
-    return send_from_directory(os.path.join(BASE_DIR, 'frontend', 'auth'), filename)
+    return send_from_directory(AUTH_FOLDER, filename)
 
 
 @app.route("/static/<path:filename>")
 def serve_static_assets(filename):
     """Serve static assets for Dashboard and common elements."""
-    # Check direct match in frontend/static
-    direct = os.path.join(BASE_DIR, 'frontend', 'static', filename)
+    direct = os.path.join(STATIC_FOLDER, filename)
     if os.path.isfile(direct):
-        return send_from_directory(os.path.join(BASE_DIR, 'frontend', 'static'), filename)
+        return send_from_directory(STATIC_FOLDER, filename)
 
-    # Check subfolders: images, css, js
     for sub in ['images', 'css', 'js']:
-        candidate = os.path.join(BASE_DIR, 'frontend', 'static', sub, filename)
+        candidate = os.path.join(STATIC_FOLDER, sub, filename)
         if os.path.isfile(candidate):
             return send_from_directory(os.path.dirname(candidate), os.path.basename(candidate))
 
-    # Check legacy root static folder
-    legacy = os.path.join(BASE_DIR, 'static', filename)
-    if os.path.isfile(legacy):
-        return send_from_directory(os.path.join(BASE_DIR, 'static'), filename)
-
-    return send_from_directory(os.path.join(BASE_DIR, 'frontend', 'static'), filename)
+    return send_from_directory(STATIC_FOLDER, filename)
 
 
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
     """Serve uploaded X-ray images and generated Grad-CAM heatmaps."""
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    safe_name = sanitize_filename(filename)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], safe_name)
 
 
+# ==============================================================================
+# API ENDPOINTS
+# ==============================================================================
 @app.route("/predict", methods=["POST"])
 def predict():
     """
@@ -212,20 +179,21 @@ def predict():
         return jsonify({"status": "error", "message": "Invalid file type. Please upload a valid image file (PNG, JPG, JPEG, BMP, WEBP)."}), 400
 
     try:
-        start_time = time.time()
+        cnn = get_cnn_model()
+        if cnn is None:
+            return jsonify({"status": "error", "message": "CNN Prediction Model unavailable."}), 500
 
+        start_time = time.time()
         timestamp = int(time.time() * 1000)
-        filename = f"{timestamp}_{file.filename}"
+        safe_orig_filename = sanitize_filename(file.filename)
+        filename = f"{timestamp}_{safe_orig_filename}"
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(image_path)
 
         input_tensor = preprocess_image(image_path)
-
-        raw_pred = cnn_model.predict(input_tensor)[0]
+        raw_pred = cnn.predict(input_tensor, verbose=0)[0]
 
         if len(raw_pred) == 1:
-            # Keras class_indices: {'fractured': 0, 'not fractured': 1}
-            # Output value raw_pred[0] is probability of class 1 ('not fractured')
             normal_prob = float(raw_pred[0])
             fracture_prob = 1.0 - normal_prob
         else:
@@ -249,7 +217,7 @@ def predict():
         heatmap_url = ""
 
         try:
-            generate_gradcam_heatmap(cnn_model, image_path, heatmap_path)
+            generate_gradcam_heatmap(cnn, image_path, heatmap_path)
             heatmap_url = f"/uploads/{heatmap_filename}"
         except Exception as grad_err:
             print(f"Grad-CAM Warning: {grad_err}")
@@ -295,6 +263,7 @@ def healing_prediction():
         if not data:
             return jsonify({"status": "error", "message": "No data provided."}), 400
 
+        ann = get_ann_model()
         age = data.get('age', 30)
         fracture_type = data.get('fracture_type', 'Transverse')
         bone = data.get('bone', 'Wrist')
@@ -303,7 +272,7 @@ def healing_prediction():
         severity = data.get('severity', 'Moderate')
 
         result = predict_healing_time_ann(
-            healing_ann_model,
+            ann,
             age=age,
             fracture_type=fracture_type,
             bone=bone,
@@ -314,9 +283,9 @@ def healing_prediction():
 
         return jsonify({
             "status": "success",
-            "estimated_weeks": result['estimated_weeks'],
-            "range_text": result['range_text'],
-            "confidence": result['confidence']
+            "estimated_weeks": result.get('estimated_weeks', 6),
+            "range_text": result.get('range_text', '5 - 7 weeks'),
+            "confidence": result.get('confidence', 90.0)
         })
 
     except Exception as e:
@@ -343,9 +312,6 @@ def rehab_recommendation():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# ==============================================================================
-# NEARBY DOCTORS API
-# ==============================================================================
 @app.route("/api/nearby-doctors")
 def nearby_doctors():
     """API: Get nearby orthopedic doctors based on user's geolocation & filters."""
@@ -355,7 +321,6 @@ def nearby_doctors():
         city = request.args.get('city', '').strip()
         search = request.args.get('search', '').strip()
 
-        # Default fallback to Kolhapur / Ichalkaranji coordinates if not set
         if lat == 0 and lng == 0:
             lat = 16.7305
             lng = 74.4724
@@ -368,4 +333,4 @@ def nearby_doctors():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=DEBUG)

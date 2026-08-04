@@ -1,26 +1,53 @@
+# Python Caches & Compiled Files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
 
-node_modules/
-
+# Virtual Environments
 venv/
+.venv/
+env/
+ENV/
+
+# Environment Variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-uploads/
-backend/uploads/
-reports/
-exports/
-logs/
-
-*.db
-*.sqlite
-
-*.keras
-*.h5
-
+# Node.js & Web Build Directories
+node_modules/
 dist/
 build/
+.next/
+.out/
 
+# IDE & OS Files
 .vscode/
+.idea/
 .DS_Store
+*.swp
+*.swo
+
+# Runtime Uploads & Database Exports (keep directory via .gitkeep)
+backend/uploads/*
+!backend/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
+reports/*
+exports/*
+logs/*
+!logs/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# Large Datasets & Large Model Weights (>100MB)
 Bone_Fracture_Dataset/
+datasets/*
+!datasets/.gitkeep
+*.keras
+*.h5

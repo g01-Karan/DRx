@@ -1,123 +1,168 @@
-# 🩺 Dr X — AI-Powered Orthopaedic Assistant
+# 🦴 Dr X — AI Orthopaedic Assistant (Bone Fracture Detection)
 
-[![Python Version](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.0+-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-Auth_%26_DB-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Framework-Flask-green.svg)](https://flask.palletsprojects.org/)
+[![TensorFlow](https://img.shields.io/badge/AI--ML-TensorFlow-orange.svg)](https://www.tensorflow.org/)
+[![Deploy](https://img.shields.io/badge/Vercel-Ready-black.svg)](https://vercel.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An enterprise-grade, full-stack AI medical web application designed for instant bone fracture diagnosis from X-ray scans, visual interpretability with Grad-CAM heatmaps, ANN-driven healing time estimations, custom rehabilitation plans, and nearby orthopedic specialist radar.
-
----
-
-## 🌟 Key Features
-
-- **🔬 Deep Learning Fracture Detection (CNN)**
-  - MobileNetV2 architecture trained on thousands of bone X-ray images.
-  - Detects fractures with high sensitivity and provides real-time confidence scores.
-
-- **🎯 Grad-CAM Visual Heatmaps**
-  - Gradient-weighted Class Activation Mapping highlights exact anomaly locations directly on the X-ray for full clinical transparency.
-
-- **⏱️ ANN Bone Healing Time Estimator**
-  - Artificial Neural Network regression model predicting recovery duration based on patient age, bone type, fracture geometry, smoking, and diabetes parameters.
-
-- **🧘 Automated Rehabilitation & Exercise Plans**
-  - Phase-by-phase recovery schedules (Phases 1–4) tailored to severity, complete with exercise descriptions, precautions, and follow-up timelines.
-
-- **📍 Nearby Orthopedic Specialist Radar**
-  - Haversine geolocation-based search for nearest orthopedic trauma centers, rating filters, and direct contact details.
-
-- **🔒 Supabase Authentication & Isolated Data Storage**
-  - Secure user authentication with isolated SQLite prediction history, supporting CSV & PDF report exports per user account.
+An end-to-end, production-grade AI Orthopaedic Assistant for automated **Bone Fracture Detection**, **Grad-CAM Heatmap Visualization**, **ANN Healing Time Estimation**, **ML Rehabilitation Recommendations**, **Nearby Orthopedic Doctor Geolocation**, and **Prediction History Reports**.
 
 ---
 
-## 📁 Modular Project Structure
+## 🚀 Key Features
+
+- 🔬 **AI Bone Fracture Detection**: High-accuracy CNN classifier (MobileNetV2 architecture) trained on X-ray imaging.
+- 🔥 **Grad-CAM Explainability Heatmaps**: Visualizes activation regions on X-rays showing precisely where fractures are detected.
+- ⏱️ **ANN Healing Time Predictor**: Artificial Neural Network predicting recovery timelines in weeks based on age, bone type, fracture classification, and comorbidities.
+- 🧘 **Rehabilitation Guidance Engine**: Knowledge-based recovery plans including stage-by-stage exercise protocols, precautions, and follow-up timelines.
+- 🏥 **Nearby Orthopedic Locator**: Geolocation engine displaying top rated orthopedic specialists and trauma centers with direct turn-by-turn Google Maps navigation links.
+- 🔐 **Supabase Authentication**: Secure user authentication and session management.
+- 📊 **Prediction History & Export**: Complete database logging with filter, search, pagination, and one-click PDF/CSV medical report export.
+- 🌐 **Vercel Serverless Ready**: Optimized WSGI entry point and standard routing for deployment on Vercel.
+
+---
+
+## 📁 Repository Structure
 
 ```
-AI-Orthopaedic-Assistant/
-├── frontend/
-│   ├── landing/          # Hero Landing Page (index.html, landing.css, landing.js)
-│   ├── auth/             # Live Supabase Auth Page (login.html, login.css, login.js)
-│   ├── templates/        # Main Dashboard & History Templates (index.html, history.html)
-│   └── static/
-│       ├── css/          # Application Stylesheets (style.css)
-│       ├── js/           # Frontend Client Logic (script.js)
-│       └── images/       # Medical Badges & Hero Preview Assets (logo.png, hero-xray.png)
-│
+Bone-Fracture-AI/
+├── api/
+│   └── index.py             # Vercel Serverless Function entrypoint
 ├── backend/
-│   ├── app.py            # Flask API & Web Controller
-│   ├── routes/           # Database Blueprints & History APIs (history.py)
-│   ├── services/         # Geolocation Trauma Center Finder (doctors_data.py)
-│   └── uploads/          # Image & Heatmap Upload Storage
-│
+│   ├── app.py               # Main Flask application & routes
+│   ├── config/              # Centralized app configuration & environment settings
+│   ├── controllers/         # Controller logic placeholders
+│   ├── middleware/          # Security headers & CORS middleware
+│   ├── routes/              # Blueprint routes (history, analytics)
+│   ├── services/            # Geolocation hospital lookup engine
+│   ├── utils/               # Sanitization & image preprocessing utilities
+│   └── uploads/             # Runtime image upload & Grad-CAM output directory
+├── frontend/
+│   ├── auth/                # Login & Supabase authentication UI
+│   ├── landing/             # Dynamic landing page with GSAP animations
+│   ├── static/              # Dashboard CSS, JavaScript, and branding assets
+│   └── templates/           # Jinja2 Flask templates (index.html, history.html)
 ├── models/
-│   ├── cnn/              # Fracture Classifier (best_model.keras, predict.py, gradcam.py)
-│   ├── ann/              # Bone Healing Model (healing_ann.keras, healing_scaler.json, healing_model.py)
-│   └── ml/               # Rehabilitation Engine (rehabilitation.py)
-│
-├── database/             # SQLite History Database (predictions.db)
-├── app.py                # Root Entry Point Launcher
-└── requirements.txt      # Python Dependencies
+│   ├── ann/                 # ANN healing time prediction model & scaler
+│   ├── cnn/                 # MobileNetV2 fracture classifier & Grad-CAM engine
+│   ├── ml/                  # Knowledge-based rehabilitation engine
+│   ├── preprocessing/       # Data preprocessing scripts
+│   ├── inference/           # Standalone CLI prediction scripts
+│   └── weights/             # Saved model checkpoints
+├── datasets/                # Sample datasets & training images
+├── docs/                    # Project documentation
+├── scripts/                 # Utility & automation scripts
+├── tests/                   # Test suite directory
+├── .env.example             # Environment variables template
+├── .gitignore               # Git exclusion rules
+├── app.py                   # Root application launcher
+├── vercel.json              # Vercel deployment configuration
+├── requirements.txt         # Production Python dependencies
+├── LICENSE                  # MIT License
+└── README.md                # Project documentation
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 🛠️ Technology Stack
+
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript, GSAP Animations, Chart.js, FontAwesome
+- **Backend Framework**: Python 3.11+, Flask Web Framework, Werkzeug
+- **Machine Learning & Vision**: TensorFlow / Keras 3, OpenCV (Headless), NumPy, Pillow, Scikit-Learn
+- **Database & Auth**: SQLite 3, Supabase JS Authentication
+- **Reporting**: ReportLab PDF Engine, CSV Streaming
+- **Deployment**: Vercel Serverless Functions
+
+---
+
+## ⚙️ Local Setup & Installation
 
 ### 1. Prerequisites
-- Python 3.11+
-- Virtual Environment (`venv` recommended)
+- Python 3.11 or higher installed on your system.
 
-### 3. Run Application
-
+### 2. Clone Repository
 ```bash
-# Launch Flask Application Server
-python app.py
+git clone https://github.com/your-username/Bone-Fracture-AI.git
+cd Bone-Fracture-AI
 ```
 
-The application will start on **`http://localhost:5050/`**.
+### 3. Create & Activate Virtual Environment
+```bash
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
+```
+
+### 4. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 5. Setup Environment Variables
+Create a `.env` file in the root directory by copying `.env.example`:
+```bash
+cp .env.example .env
+```
 
 ---
 
-## 🌐 Application Navigation & Routes
+## 💻 Running the Application
 
-| Path | Description |
-| :--- | :--- |
-| **`http://localhost:5050/`** | Hero Landing Page |
-| **`http://localhost:5050/login`** | Sign In / Create Account |
-| **`http://localhost:5050/dashboard`** | AI Diagnostic Dashboard & Bone Analysis |
-| **`http://localhost:5050/history`** | Patient History Records & PDF/CSV Exports |
-
----
-
-## 🔌 API Endpoints Summary
-
-- `POST /predict`: Upload bone X-ray image for CNN classification & Grad-CAM heatmap generation.
-- `POST /api/healing-prediction`: ANN prediction of recovery weeks based on health factors.
-- `POST /api/rehab-recommendation`: Phase-by-phase rehabilitation exercise generator.
-- `GET /api/nearby-doctors`: Location-sorted orthopedic hospitals & specialists.
-- `GET /api/history`: User-isolated prediction history list with pagination.
-- `GET /api/history/export/csv` & `/pdf`: Export patient reports.
+### Start Flask Server
+```bash
+python app.py
+```
+Open your browser and navigate to:
+- **Landing Page**: `http://localhost:5050/`
+- **Login Page**: `http://localhost:5050/login`
+- **Dashboard Application**: `http://localhost:5050/dashboard`
 
 ---
 
-## 🛠️ Tech Stack
+## 🤖 Running Machine Learning Inference via CLI
 
-- **Frontend**: HTML5, Vanilla CSS3 (Glassmorphism), JavaScript (ES6+), GSAP (GreenSock Animations), FontAwesome.
-- **Backend**: Python 3.11, Flask, SQLite3, ReportLab (PDF generation).
-- **AI / Machine Learning**: TensorFlow, Keras 3, MobileNetV2, OpenCV, NumPy, Scikit-Learn.
-- **Authentication**: Supabase Auth SDK.
+### Predict Image Classification
+To test image prediction directly from the command line:
+```bash
+python models/cnn/predict.py
+```
+
+### Train Healing Time ANN Model
+To retrain the healing time ANN model:
+```bash
+python models/ann/train_healing_model.py
+```
 
 ---
 
-## ⚠️ Medical Disclaimer
+## 🌐 Deployment to Vercel
 
-*Dr X is an AI decision-support tool designed for educational and preliminary screening purposes. It is **not** a substitute for professional medical diagnosis. Always consult a qualified orthopedic physician or radiologist for clinical evaluation.*
+1. Install the [Vercel CLI](https://vercel.com/cli):
+   ```bash
+   npm i -g vercel
+   ```
+2. Deploy directly from your terminal:
+   ```bash
+   vercel
+   ```
+3. Or link your GitHub repository to your [Vercel Dashboard](https://vercel.com/dashboard) for automatic deployments on push.
 
 ---
 
-## 📄 License
+## 🛡️ Security & Privacy
 
-Distributed under the MIT License. See `LICENSE` for more details.
+- All user file uploads are sanitized using `secure_filename`.
+- CORS and security response headers are strictly enforced.
+- Database queries use parameterized bindings to protect against SQL injection.
+- Secret keys and API credentials are kept out of source code via `.env`.
+
+---
+
+## 📜 License
+
+This project is open-source and licensed under the [MIT License](LICENSE).
