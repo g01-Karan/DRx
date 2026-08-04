@@ -9,6 +9,7 @@ for Vercel Serverless Functions.
 
 import os
 import sys
+from urllib.parse import parse_qs
 
 # Add project root directory to python path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,23 +25,13 @@ class VercelPathFixer:
         self.app = app
 
     def __call__(self, environ, start_response):
-        path = environ.get('PATH_INFO', '')
-        if path.startswith('/api/index') or path == '/api' or path == '/api/':
-            real_path = (
-                environ.get('HTTP_X_MATCHED_PATH') or
-                environ.get('HTTP_X_FORWARDED_URI') or
-                environ.get('REQUEST_URI') or
-                environ.get('RAW_URI') or
-                '/'
-            )
-            real_path = real_path.split('?')[0]
-            if real_path.startswith('/api/index.py'):
-                real_path = real_path[13:] or '/'
-            elif real_path.startswith('/api/index'):
-                real_path = real_path[10:] or '/'
-
-            environ['PATH_INFO'] = real_path if real_path else '/'
-
+        qs_string = environ.get('QUERY_STRING', '')
+        qs = parse_qs(qs_string)
+        if '__path' in qs:
+            path = qs['__path'][0]
+            if not path.startswith('/'):
+                path = '/' + path
+            environ['PATH_INFO'] = path
         return self.app(environ, start_response)
 
 
