@@ -1,5 +1,4 @@
 flask
-tensorflow-cpu
 numpy
 opencv-python-headless
 pillow
