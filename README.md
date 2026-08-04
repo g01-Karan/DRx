@@ -70,21 +70,6 @@ AI-Orthopaedic-Assistant/
 - Python 3.11+
 - Virtual Environment (`venv` recommended)
 
-### 2. Installation & Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/g01-Karan/Quantum-Predictor.git
-cd Quantum-Predictor
-
-# Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
 ### 3. Run Application
 
 ```bash
