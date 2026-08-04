@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dr X — AI-Powered Orthopaedic Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/landing/landing.css" />
+  <!-- GSAP & ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Interactive Cursor Glow Follower -->
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <!-- Background Orbs and Mesh Grid -->
+  <div class="bg-gradient-orb orb-1"></div>
+  <div class="bg-gradient-orb orb-2"></div>
+  <div class="bg-gradient-orb orb-3"></div>
+  <div class="bg-grid-pattern"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <div class="brand-icon"><img src="/static/logo.png" alt="Dr X Logo" /></div>
+        <span class="brand-text">Dr<span class="highlight">X</span></span>
+      </a>
+      
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a href="#stats">Impact</a>
+      </div>
+
+      <div class="nav-actions">
+        <a href="/login" class="btn-text" id="navLoginBtn">Sign In</a>
+        <a href="/login" class="btn-primary-glow" id="navCtaBtn">Get Started <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero-section">
+    <div class="hero-container">
+      <!-- Left Content -->
+      <div class="hero-content">
+        <div class="hero-badge animate-fade">
+          <span class="badge-dot"></span>
+          <span>Next-Generation Clinical AI</span>
+        </div>
+        <h1 class="hero-title animate-fade">
+          AI Orthopaedic <br />
+          <span class="gradient-text">Assistant</span>
+        </h1>
+        <p class="hero-subtitle animate-fade">
+          AI-Powered Bone Fracture Detection, Healing Prediction, and Smart Orthopaedic Insights.
+        </p>
+        <p class="hero-description animate-fade">
+          Empowering clinicians and patients with deep learning image analysis, 
+          automated Grad-CAM heatmaps, personalized rehabilitation roadmap, and instant 
+          nearby hospital location.
+        </p>
+
+        <div class="hero-buttons animate-fade">
+          <a href="/login" class="btn-hero-primary" id="heroGetStartedBtn">
+            <span>Get Started Free</span>
+            <i class="fa-solid fa-rocket"></i>
+          </a>
+          <a href="#features" class="btn-hero-secondary">
+            <span>Explore Features</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </a>
+        </div>
+
+        <div class="hero-trust animate-fade">
+          <div class="trust-avatars">
+            <span class="avatar"><i class="fa-solid fa-user-md"></i></span>
+            <span class="avatar"><i class="fa-solid fa-hospital-user"></i></span>
+            <span class="avatar"><i class="fa-solid fa-heart-pulse"></i></span>
+          </div>
+          <span class="trust-text">Trusted by clinicians for rapid X-ray triaging</span>
+        </div>
+      </div>
+
+      <!-- Right Content: Interactive Glass Card Showcase -->
+      <div class="hero-showcase">
+        <div class="showcase-card-stack">
+          <!-- Main AI Detection Preview Card -->
+          <div class="glass-card card-main-preview">
+            <div class="card-header">
+              <span class="tag-badge">AI Diagnostic Scan</span>
+              <span class="confidence-tag">98.4% Confidence</span>
+            </div>
+            <div class="scan-visual">
+              <div class="scan-beam"></div>
+              <img src="/static/hero-xray.png" alt="AI X-Ray Scan Preview" class="scan-img-preview" />
+            </div>
+            <div class="scan-result">
+              <div class="result-row">
+                <span>Result:</span>
+                <strong class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Fracture Detected</strong>
+              </div>
+              <div class="result-row">
+                <span>Region:</span>
+                <strong>Distal Radius & Ulna</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Statistics Section -->
+  <section class="stats-section" id="stats">
+    <div class="stats-container">
+      <div class="stat-box">
+        <h3 class="counter" data-target="99.2">0</h3><span class="unit">%</span>
+        <p>Model Accuracy</p>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-box">
+        <h3 class="counter" data-target="1.8">0</h3><span class="unit">s</span>
+        <p>Average Inference Time</p>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-box">
+        <h3 class="counter" data-target="10000">0</h3><span class="unit">+</span>
+        <p>X-rays Analyzed</p>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-box">
+        <h3>24 / 7</h3>
+        <p>Instant Availability</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section" id="features">
+    <div class="section-header">
+      <span class="section-tag">Powerful Capabilities</span>
+      <h2>State-of-the-Art Orthopaedic AI</h2>
+      <p>A complete suite built to accelerate diagnosis, recovery planning, and patient care.</p>
+    </div>
+
+    <div class="features-grid">
+      <!-- Feature 1 -->
+      <div class="feature-card glass-panel">
+        <div class="feature-icon"><i class="fa-solid fa-microscope"></i></div>
+        <h3>CNN Fracture Detection</h3>
+        <p>Deep neural network trained on thousands of bone X-rays to detect fractures with high sensitivity.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-card glass-panel">
+        <div class="feature-icon"><i class="fa-solid fa-bullseye"></i></div>
+        <h3>Grad-CAM Heatmaps</h3>
+        <p>Visual explanation highlights exact anomaly locations directly on the X-ray image for full transparency.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-card glass-panel">
+        <div class="feature-icon"><i class="fa-solid fa-calculator"></i></div>
+        <h3>ANN Healing Time Estimator</h3>
+        <p>Machine learning model that predicts recovery duration based on patient age, bone type, and severity.</p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="feature-card glass-panel">
+        <div class="feature-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+        <h3>Custom Rehabilitation Plans</h3>
+        <p>Automated phase-by-phase exercise and recovery protocols tailored specifically to the patient's condition.</p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="feature-card glass-panel">
+        <div class="feature-icon"><i class="fa-solid fa-location-dot"></i></div>
+        <h3>Nearby Hospital Radar</h3>
+        <p>Instant geolocation-based search for nearest orthopaedic trauma centers and specialist clinics.</p>
+
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="feature-card glass-panel">
+        <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <h3>Secure Cloud History</h3>
+        <p>Supabase-backed, user-isolated database ensuring your patient records remain strictly private and accessible.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section class="about-section" id="about">
+    <div class="about-container">
+      <div class="about-image-wrapper">
+        <div class="about-glass-backdrop"></div>
+        <div class="about-card-display">
+          <i class="fa-solid fa-notes-medical display-icon"></i>
+          <h4>Precision + Speed</h4>
+          <p>Reducing diagnostic delay in emergency and clinical settings.</p>
+        </div>
+      </div>
+      <div class="about-content">
+        <span class="section-tag">Why Dr X?</span>
+        <h2>Transforming Orthopaedic Diagnostics</h2>
+        <p>
+          Dr X combines computer vision with clinical workflows to deliver fast, reliable second opinions 
+          for emergency rooms, orthopaedic clinics, and tele-health providers.
+        </p>
+        <ul class="about-list">
+          <li><i class="fa-solid fa-circle-check"></i> <strong>Zero-delay analysis:</strong> Instant AI predictions in under 2 seconds.</li>
+          <li><i class="fa-solid fa-circle-check"></i> <strong>End-to-End Care:</strong> From diagnosis to 12-week rehabilitation schedules.</li>
+          <li><i class="fa-solid fa-circle-check"></i> <strong>Multi-Tenant Isolation:</strong> Your patient data belongs solely to your account.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="cta-container glass-panel">
+      <div class="cta-content">
+        <h2>Ready to Experience AI-Driven Orthopaedics?</h2>
+        <p>Join healthcare professionals utilizing instant AI X-ray analysis and intelligent recovery planning.</p>
+        <a href="/login" class="btn-hero-primary cta-btn" id="ctaStartNowBtn">
+          <span>Launch Workspace Now</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="/" class="brand-logo">
+          <div class="logo-icon"><img src="/static/logo.png" alt="Dr X Logo" /></div>
+          <span class="brand-text">Dr<span class="highlight">X</span></span>
+        </a>
+        <p>AI Orthopaedic Assistant Platform</p>
+      </div>
+      <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a href="/login" id="footerLoginLink">Login</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Dr X Medical AI. All rights reserved. Powered by Supabase & TensorFlow.</p>
+    </div>
+  </footer>
+
+  <script src="/landing/landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In / Register — Dr X AI Orthopaedic Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/auth/login.css" />
+  <!-- Supabase JS Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Animated Background Orbs -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-grid"></div>
+
+  <!-- Main Container -->
+  <div class="auth-container">
+    <div class="auth-card">
+      <!-- Header -->
+      <div class="auth-header">
+        <a href="/" class="brand-logo">
+          <div class="logo-icon"><img src="/static/logo.png" alt="Dr X Logo" /></div>
+          <span class="logo-text">Dr<span class="highlight">X</span></span>
+        </a>
+        <h2 id="authTitle">Welcome Back</h2>
+        <p id="authSubtitle">Access your AI Orthopaedic Diagnostic Workspace</p>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button id="tabSignin" class="tab-btn active" onclick="switchAuthTab('signin')">Sign In</button>
+        <button id="tabSignup" class="tab-btn" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+
+      <!-- Alert / Notification Message -->
+      <div id="authAlert" class="auth-alert hidden"></div>
+
+      <!-- Auth Form -->
+      <form id="authForm" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group" id="groupName" style="display: none;">
+          <label for="fullName"><i class="fa-regular fa-user"></i> Full Name</label>
+          <input type="text" id="fullName" placeholder="Dr. Alex Morgan" />
+        </div>
+
+        <div class="form-group">
+          <label for="email"><i class="fa-regular fa-envelope"></i> Email Address</label>
+          <input type="email" id="email" placeholder="doctor@hospital.org" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="password" placeholder="••••••••" required minlength="6" />
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
+              <i class="fa-regular fa-eye" id="passwordIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="btn-submit">
+          <span id="btnText">Sign In to Dashboard</span>
+          <div id="btnSpinner" class="spinner hidden"></div>
+        </button>
+      </form>
+
+      <!-- Footer / Helper Links -->
+      <div class="auth-footer">
+        <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/auth/login.js"></script>
+</body>
+</html>

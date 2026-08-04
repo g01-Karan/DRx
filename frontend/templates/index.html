@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dr X - AI Orthopaedic Assistant</title>
+  <meta name="description" content="Dr X — Premium AI-powered bone fracture detection, Grad-CAM visualization, healing time prediction, rehabilitation, and real nearby hospital finder." />
+
+  <!-- Plus Jakarta Sans Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/png" />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <!-- GSAP CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+  <!-- Spline 3D Viewer CDN -->
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.72/build/spline-viewer.js"></script>
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-icon">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Dr X Logo" />
+          </div>
+          <div class="brand-text">
+            <h2>Dr X</h2>
+            <span>AI Medical Suite</span>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <a href="javascript:void(0)" class="nav-item active" id="navDashboard" onclick="switchTab('dashboard', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+            Dashboard
+          </a>
+          <a href="javascript:void(0)" class="nav-item" id="navAnalysis" onclick="switchTab('analysis', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            Bone Analysis
+          </a>
+          <a href="javascript:void(0)" class="nav-item" id="navAnalytics" onclick="switchTab('analytics', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+            Analytics
+          </a>
+          <a href="javascript:void(0)" class="nav-item" id="navRehab" onclick="switchTab('rehab', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+            </svg>
+            Rehabilitation
+          </a>
+          <a href="javascript:void(0)" class="nav-item" id="navDoctors" onclick="switchTab('doctors', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            Nearby Hospitals
+          </a>
+          <a href="/history" class="nav-item" id="navHistory">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            History
+          </a>
+        </nav>
+      </div>
+    </aside>
+
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Top Header Navigation -->
+      <header class="top-bar">
+        <div class="welcome-msg">
+          <h1>Hello Dr X 👋</h1>
+          <p id="topBarSubtitle">Welcome to your AI Diagnostic Suite</p>
+        </div>
+
+        <div class="user-profile-actions">
+          <div class="date-pill" id="currentDateDisplay">Loading Date...</div>
+
+          <!-- User Profile & Logout -->
+          <div class="user-profile-pill" id="userProfilePill" style="display: flex; align-items: center; gap: 8px; background: var(--card-bg, rgba(255,255,255,0.8)); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--card-border, #e2e8f0); font-size: 13px; font-weight: 600;">
+            <span id="userNameDisplay">Doctor</span>
+            <button onclick="handleLogout()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px; display:flex; align-items:center; margin-left:4px;" title="Logout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Theme Toggle -->
+          <div class="theme-toggle" id="themeToggle" title="Toggle Theme">
+            <button class="theme-btn active" data-theme="light" title="Light Mode">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+              </svg>
+            </button>
+            <button class="theme-btn" data-theme="dark" title="Dark Mode">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            </button>
+            <button class="theme-btn" data-theme="system" title="System Theme">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- ====================================================================
+           TAB 1: DASHBOARD OVERVIEW (3D SPLINE + SPLIT HERO CARDS)
+           ==================================================================== -->
+      <div class="tab-content active" id="tabContentDashboard">
+        <!-- 3D Spline Interactive Background Layer -->
+        <div class="dashboard-spline-bg">
+          <spline-viewer url="https://prod.spline.design/hSl0jGnK0Nk6TxJR/scene.splinecode"></spline-viewer>
+        </div>
+
+        <!-- Hero Row Split (Two Separate Glass Cards) -->
+        <div class="hero-row-split" id="heroSection">
+          <!-- Card 1: Text Content & Actions (Left Side) -->
+          <section class="hero-card hero-glass hero-card-main">
+            <div class="hero-text">
+              <span class="badge">Medical AI Suite</span>
+              <h2>AI Bone Fracture Detection</h2>
+              <p>Upload a bone X-ray image to perform immediate AI analysis for fracture classification.</p>
+              <div class="hero-actions">
+                <button class="btn-primary" onclick="switchTab('analysis')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                  Start Bone Analysis
+                </button>
+                <button class="btn-secondary" onclick="switchTab('doctors')">Find Nearby Hospitals</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Quick Start CTA Banner (Pushed Down) -->
+        <section class="quick-cta-card quick-cta-glass">
+          <div class="quick-cta-content">
+            <h3>Ready to analyze a Bone X-ray?</h3>
+            <p>Upload your X-ray image for instant AI fracture detection, Grad-CAM heatmap visualization, and rehabilitation guidance.</p>
+          </div>
+          <button class="btn-primary" onclick="switchTab('analysis')">Go to Bone Analysis →</button>
+        </section>
+      </div>
+
+
+      <!-- ====================================================================
+           TAB 2: BONE ANALYSIS (UPLOAD & INFERENCE)
+           ==================================================================== -->
+      <div class="tab-content" id="tabContentAnalysis">
+        <section class="workspace-grid">
+
+          <!-- Patient Name Input -->
+          <div class="patient-input-card">
+            <label for="patientNameInput">Patient Name</label>
+            <input type="text" id="patientNameInput" placeholder="Enter patient name (optional)" />
+          </div>
+
+          <!-- Drag & Drop Upload Glass Card -->
+          <div class="upload-card" id="dropZone" onclick="document.getElementById('imageFileInput').click()">
+            <input type="file" id="imageFileInput" class="file-input-hidden" accept="image/png, image/jpeg, image/jpg" />
+            
+            <div class="upload-dropzone" id="uploadDropzoneUI">
+              <div class="upload-icon-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                </svg>
+              </div>
+              <div class="upload-instructions">
+                <h3>Drag & Drop X-ray Image Here</h3>
+                <p>or click to browse files from your computer</p>
+              </div>
+            </div>
+
+            <!-- Selected File Preview UI -->
+            <div class="preview-container" id="previewUI">
+              <div class="preview-image-wrapper">
+                <img id="previewImg" src="" alt="X-ray Preview" />
+              </div>
+              <p id="previewFileName" style="font-weight: 600; color: var(--text-dark);"></p>
+            </div>
+          </div>
+
+          <!-- Analyze Button -->
+          <div class="action-container">
+            <button id="analyzeBtn" class="btn-analyze" disabled>
+              <span class="spinner" id="analyzeSpinner"></span>
+              <span id="analyzeBtnText">Analyze X-ray</span>
+            </button>
+          </div>
+
+          <!-- Results Dashboard Section -->
+          <div class="result-dashboard" id="resultDashboard">
+            <div class="result-grid">
+              
+              <!-- Left Card: Side-by-Side X-ray + Heatmap -->
+              <div class="result-card xray-display">
+                <div class="xray-tabs">
+                  <h3>Uploaded Bone X-ray</h3>
+                </div>
+                <div class="xray-dual-view">
+                  <div class="xray-single">
+                    <span class="xray-label">Original X-ray</span>
+                    <div class="xray-image-frame">
+                      <img id="resultImage" src="" alt="Analyzed X-ray Image" />
+                    </div>
+                  </div>
+                  <div class="xray-single" id="heatmapContainer" style="display:none;">
+                    <span class="xray-label heatmap-label">AI Attention Heatmap</span>
+                    <div class="xray-image-frame">
+                      <img id="heatmapImage" src="" alt="Grad-CAM Heatmap" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Card: Enhanced Diagnosis -->
+              <div class="result-card diagnosis-details">
+                <div class="diagnosis-header">
+                  <p>AI Diagnostic Prediction</p>
+                  <div class="prediction-pill" id="predictionPill">
+                    <span id="predictionLabel">Analyzing...</span>
+                  </div>
+                </div>
+
+                <!-- Circular Progress Bar -->
+                <div class="confidence-container">
+                  <div class="progress-ring-wrapper">
+                    <svg class="progress-ring" width="120" height="120">
+                      <circle class="progress-ring__circle-bg" stroke-width="10" fill="transparent" r="52" cx="60" cy="60"/>
+                      <circle id="confidenceProgressRing" class="progress-ring__circle" stroke-width="10" fill="transparent" r="52" cx="60" cy="60"/>
+                    </svg>
+                    <div class="confidence-text-inside" id="confidenceValue">0%</div>
+                  </div>
+
+                  <div class="confidence-meta">
+                    <h4>Confidence Score</h4>
+                    <p>Probability score computed for diagnosis</p>
+                  </div>
+                </div>
+
+                <!-- Enhanced Info Cards -->
+                <div class="sub-info-grid">
+                  <div class="sub-info-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h5>Analysis Time</h5>
+                      <p id="subInferenceTime">0.00 s</p>
+                    </div>
+                  </div>
+
+                  <div class="sub-info-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    <div>
+                      <h5>Severity</h5>
+                      <p id="subSeverity" class="severity-text">N/A</p>
+                    </div>
+                  </div>
+
+                  <div class="sub-info-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                    </svg>
+                    <div>
+                      <h5>Emergency Level</h5>
+                      <p id="subEmergency">None</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- AI Suggestion Card -->
+                <div class="suggestion-card" id="suggestionCard">
+                  <div class="suggestion-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                    </svg>
+                  </div>
+                  <div class="suggestion-text">
+                    <h5>AI Suggestion</h5>
+                    <p id="suggestionContent">Awaiting analysis...</p>
+                  </div>
+                </div>
+
+                <div class="disclaimer-text">
+                  <small>⚠️ AI Estimate — Not a Medical Diagnosis. Always consult a qualified specialist.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Healing Time Estimator Section -->
+          <div class="healing-section" id="healingSection" style="display:none;">
+            <div class="section-header">
+              <h3>🩺 Healing Time Estimator (ANN)</h3>
+              <p>AI-powered estimated recovery timeline</p>
+            </div>
+            <div class="healing-grid">
+              <div class="healing-form-card">
+                <div class="form-group">
+                  <label for="healingAge">Age</label>
+                  <input type="number" id="healingAge" placeholder="e.g. 35" min="1" max="120" />
+                </div>
+                <div class="form-group">
+                  <label for="healingFractureType">Fracture Type</label>
+                  <select id="healingFractureType">
+                    <option value="Hairline">Hairline</option>
+                    <option value="Transverse" selected>Transverse</option>
+                    <option value="Oblique">Oblique</option>
+                    <option value="Comminuted">Comminuted</option>
+                    <option value="Spiral">Spiral</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="healingBone">Bone</label>
+                  <select id="healingBone">
+                    <option value="Finger">Finger</option>
+                    <option value="Wrist" selected>Wrist</option>
+                    <option value="Forearm">Forearm</option>
+                    <option value="Ankle">Ankle</option>
+                    <option value="Tibia">Tibia (Shinbone)</option>
+                    <option value="Femur">Femur (Thighbone)</option>
+                    <option value="Hip">Hip</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <div class="form-group checkbox-group">
+                    <label><input type="checkbox" id="healingSmoking" /> Smoking</label>
+                  </div>
+                  <div class="form-group checkbox-group">
+                    <label><input type="checkbox" id="healingDiabetes" /> Diabetes</label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="healingSeverity">Severity</label>
+                  <select id="healingSeverity">
+                    <option value="Low">Low</option>
+                    <option value="Moderate" selected>Moderate</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+                <button class="btn-primary" id="healingPredictBtn" onclick="predictHealingTime()">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Estimate Healing Time
+                </button>
+              </div>
+
+              <div class="healing-result-card" id="healingResultCard" style="display:none;">
+                <div class="healing-result-header">
+                  <h4>Estimated Healing Time</h4>
+                </div>
+                <div class="healing-time-display">
+                  <span class="healing-weeks" id="healingWeeksText">—</span>
+                </div>
+                <div class="healing-confidence">
+                  <div class="progress-ring-wrapper small">
+                    <svg class="progress-ring" width="80" height="80">
+                      <circle class="progress-ring__circle-bg" stroke-width="8" fill="transparent" r="34" cx="40" cy="40"/>
+                      <circle id="healingConfidenceRing" class="progress-ring__circle" stroke-width="8" fill="transparent" r="34" cx="40" cy="40"/>
+                    </svg>
+                    <div class="confidence-text-inside small" id="healingConfidenceText">0%</div>
+                  </div>
+                  <div>
+                    <h5>Prediction Confidence</h5>
+                    <p id="healingConfidenceValue">—</p>
+                  </div>
+                </div>
+                <div class="disclaimer-text">
+                  <small>⚠️ This is an AI estimate for educational purposes only. Always consult a qualified orthopedic specialist for actual medical advice.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nearby Doctors Section under Analysis -->
+          <div class="doctors-section" id="doctorsSection" style="display:none;">
+            <div class="section-header">
+              <h3>📍 Nearby Orthopedic Specialists</h3>
+              <p>Closest hospitals and doctors to your location</p>
+            </div>
+            <div class="doctors-grid" id="doctorsGrid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </section>
+      </div>
+
+
+      <!-- ====================================================================
+           TAB 3: ANALYTICS & TRENDS (METRICS CARDS + CHARTS)
+           ==================================================================== -->
+      <div class="tab-content" id="tabContentAnalytics">
+        <div class="section-header">
+          <h3>📊 AI Diagnostic Analytics & Performance</h3>
+          <p>Real-time prediction trends, classification distribution, and model metrics</p>
+        </div>
+
+        <!-- AI Metrics Cards (6 Cards) -->
+        <section class="metrics-grid" id="analyticsMetrics">
+          <div class="metric-card">
+            <div class="metric-icon-box blue">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span>Total Predictions</span>
+              <h3 id="statTotalPredictions">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-box red">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span>Fractures Detected</span>
+              <h3 id="statFractures">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-box green">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span>Normal Cases</span>
+              <h3 id="statNormal">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-box purple">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 01-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 01-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span>Model Accuracy</span>
+              <h3 id="statAccuracy">95%</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-box cyan">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span>Avg. Confidence</span>
+              <h3 id="statAvgConfidence">0%</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-box orange">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="metric-info">
+              <span>Avg. Inference Time</span>
+              <h3 id="statAvgTime">0s</h3>
+            </div>
+          </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-grid" id="chartsSection">
+          <div class="chart-card">
+            <h3>Weekly Predictions Trend</h3>
+            <canvas id="weeklyChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Monthly Cumulative Analysis</h3>
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </section>
+      </div>
+
+
+      <!-- ====================================================================
+           TAB 4: REHABILITATION & RECOVERY PLAN
+           ==================================================================== -->
+      <div class="tab-content" id="tabContentRehab">
+        <div class="section-header">
+          <h3>🏥 AI Rehabilitation & Recovery Suite</h3>
+          <p>Select a patient record from history or preset condition to view their personalized recovery plan</p>
+        </div>
+
+        <div class="rehab-selector-card">
+          <div class="rehab-selectors-grid">
+            <div class="form-group flex-2">
+              <label for="rehabPatientSelect">📋 Select Patient from Prediction History</label>
+              <select id="rehabPatientSelect" onchange="onRehabPatientSelected()">
+                <option value="">Loading patient history...</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="rehabSelectSeverity">⚙️ Or Override Condition / Severity</label>
+              <select id="rehabSelectSeverity" onchange="generateCustomRehabPlan()">
+                <option value="Moderate" selected>Fractured — Moderate Severity</option>
+                <option value="Low">Fractured — Low Severity (Hairline / Mild)</option>
+                <option value="High">Fractured — High Severity</option>
+                <option value="Critical">Fractured — Critical Severity</option>
+                <option value="Normal">Not Fractured — Normal Preventive Plan</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Patient Medical Info Summary Pill -->
+          <div class="patient-rehab-info-card" id="patientRehabInfoCard" style="display:none;">
+            <div class="patient-info-left">
+              <div class="patient-avatar-circle">👤</div>
+              <div class="patient-info-text">
+                <h4 id="rehabPatientName">Patient Name</h4>
+                <p id="rehabPatientMeta">Date &bull; Bone &bull; Confidence</p>
+              </div>
+            </div>
+            <div class="patient-info-right">
+              <span class="table-pill" id="rehabPatientPredictionPill">Fractured</span>
+              <span class="severity-badge" id="rehabPatientSeverityBadge">Moderate</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rehabilitation Plan Output Container -->
+        <div class="rehab-section" id="rehabSectionMain">
+          <div class="rehab-summary" id="rehabSummary"></div>
+
+          <!-- Accordion Sections -->
+          <div class="accordion-container" id="rehabAccordion">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div class="rehab-actions-bar">
+            <button class="btn-primary" onclick="window.print()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231a1.125 1.125 0 01-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.085 48.085 0 00-3.313-.336M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.084 48.084 0 013.313-.336m0 0a48.216 48.216 0 019.7 0m-9.7 0V3.75c0-.621.504-1.125 1.125-1.125h7.5c.621 0 1.125.504 1.125 1.125v3.194" />
+              </svg>
+              Print / Save Rehabilitation Plan
+            </button>
+          </div>
+
+          <div class="disclaimer-text">
+            <small>⚠️ AI-generated rehabilitation guidance. Consult your physician before following any exercise program.</small>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ====================================================================
+           TAB 5: REAL NEARBY HOSPITALS & SPECIALISTS FINDER
+           ==================================================================== -->
+      <div class="tab-content" id="tabContentDoctors">
+        <div class="section-header">
+          <h3>📍 Real Nearby Orthopedic Hospitals & Specialists</h3>
+          <p>Verified orthopedic hospitals and trauma centers with direct turn-by-turn Google Maps navigation</p>
+        </div>
+
+        <!-- Controls Toolbar Card -->
+        <div class="doctors-toolbar-card">
+          <div class="toolbar-grid">
+            <button class="btn-location-detect" onclick="detectLiveLocation()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+              </svg>
+              Auto-Detect My Live Location
+            </button>
+
+            <div class="toolbar-search">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input type="text" id="dedicatedDoctorSearch" placeholder="Search hospital name, doctor, area..." onkeyup="onDoctorFilterChange()" />
+            </div>
+
+            <select id="dedicatedDoctorCitySelect" onchange="onDoctorFilterChange()">
+              <option value="all">All Cities & Regions</option>
+              <option value="Ichalkaranji" selected>Ichalkaranji / Kolhapur Region</option>
+              <option value="Kolhapur">Kolhapur</option>
+              <option value="Sangli">Sangli & Miraj</option>
+              <option value="Pune">Pune</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Delhi">Delhi NCR</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Chennai">Chennai</option>
+              <option value="Hyderabad">Hyderabad</option>
+            </select>
+          </div>
+          <div class="location-status-bar" id="locationStatusBar">
+            📍 Showing nearby real hospitals sorted by distance from your coordinates.
+          </div>
+        </div>
+
+        <!-- Dedicated Real Hospitals Grid -->
+        <section class="dedicated-doctors-section">
+          <div class="doctors-grid" id="dedicatedDoctorsGrid">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+      </div>
+
+
+      <!-- Footer -->
+      <footer class="app-footer">
+        <p><strong>Dr X</strong> &bull; AI Orthopaedic Assistant</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Main JavaScript File -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
