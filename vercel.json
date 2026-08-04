@@ -1,9 +1,21 @@
 {
   "version": 2,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index.py?__path=/$1"
+      "src": "/landing/(.*)",
+      "dest": "/frontend/landing/$1"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "/frontend/auth/$1"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/frontend/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
     }
   ]
 }
