@@ -1,9 +1,7 @@
 flask
-tensorflow
+tensorflow-cpu
 numpy
 opencv-python-headless
-matplotlib
-scikit-learn
 pillow
 reportlab
 werkzeug

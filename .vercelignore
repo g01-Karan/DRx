@@ -1,0 +1,22 @@
+# Training & Development Scripts
+models/cnn/train_model.py
+models/ann/train_healing_model.py
+tests/
+docs/
+datasets/
+scripts/
+
+# Database & Weight Artifacts
+*.keras
+*.h5
+*.db
+*.sqlite
+
+# Documentation & Git
+.git/
+.gitignore
+.vscode/
+README.md
+LICENSE
+CONTRIBUTING.md
+CHANGELOG.md
