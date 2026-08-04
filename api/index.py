@@ -25,12 +25,20 @@ class VercelPathFixer:
 
     def __call__(self, environ, start_response):
         path = environ.get('PATH_INFO', '')
-        if path in ['/api/index.py', '/api/index', '/api']:
-            forwarded_uri = environ.get('HTTP_X_FORWARDED_URI') or environ.get('HTTP_X_MATCHED_PATH')
-            if forwarded_uri and not forwarded_uri.startswith('/api/index'):
-                environ['PATH_INFO'] = forwarded_uri.split('?')[0]
-            else:
-                environ['PATH_INFO'] = '/'
+        if path in ['/api/index.py', '/api/index', '/api', '/api/']:
+            # Inspect WSGI headers to find exact requested URI
+            real_path = (
+                environ.get('RAW_URI') or
+                environ.get('REQUEST_URI') or
+                environ.get('HTTP_X_FORWARDED_URI') or
+                environ.get('HTTP_X_MATCHED_PATH') or
+                '/'
+            )
+            # Strip query strings if present
+            real_path = real_path.split('?')[0]
+            if not real_path or real_path.startswith('/api/index'):
+                real_path = '/'
+            environ['PATH_INFO'] = real_path
         return self.app(environ, start_response)
 
 
