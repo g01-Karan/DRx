@@ -15,6 +15,7 @@ Production-ready backend API featuring:
 import os
 import sys
 import time
+import base64
 import numpy as np
 from flask import Flask, render_template, request, jsonify, send_from_directory
 
@@ -158,6 +159,21 @@ def uploaded_file(filename):
 # ==============================================================================
 # API ENDPOINTS
 # ==============================================================================
+def file_to_data_url(file_path):
+    """Convert an image file on disk to Base64 Data URL for serverless rendering."""
+    if not file_path or not os.path.exists(file_path):
+        return ""
+    try:
+        ext = file_path.rsplit('.', 1)[-1].lower()
+        mime = 'image/png' if ext == 'png' else 'image/jpeg'
+        with open(file_path, 'rb') as f:
+            encoded = base64.b64encode(f.read()).decode('utf-8')
+            return f"data:{mime};base64,{encoded}"
+    except Exception as e:
+        print(f"Data URL conversion error: {e}")
+        return ""
+
+
 @app.route("/predict", methods=["POST"])
 def predict():
     """
@@ -218,20 +234,20 @@ def predict():
 
         heatmap_filename = f"heatmap_{timestamp}.png"
         heatmap_path = os.path.join(app.config['UPLOAD_FOLDER'], heatmap_filename)
+        
+        image_url = file_to_data_url(image_path) or f"/uploads/{filename}"
         heatmap_url = ""
 
         if cnn is not None:
             try:
                 from gradcam import generate_gradcam_heatmap
                 generate_gradcam_heatmap(cnn, image_path, heatmap_path)
-                heatmap_url = f"/uploads/{heatmap_filename}"
+                heatmap_url = file_to_data_url(heatmap_path) or f"/uploads/{heatmap_filename}"
             except Exception as grad_err:
                 print(f"Grad-CAM Warning: {grad_err}")
-                heatmap_url = f"/uploads/{filename}"
+                heatmap_url = image_url
         else:
-            heatmap_url = f"/uploads/{filename}"
-
-        image_url = f"/uploads/{filename}"
+            heatmap_url = image_url
 
         record_data = {
             'user_id': user_id,
