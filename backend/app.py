@@ -103,6 +103,7 @@ def get_ann_model():
 # FLASK PAGE ROUTES
 # ==============================================================================
 @app.route("/")
+@app.route("/api/index.py")
 def landing():
     """Render the Landing Page."""
     return send_from_directory(LANDING_FOLDER, 'index.html')
