@@ -481,6 +481,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 9. ANIMATED COUNTERS
   // ========================================================================
   function animateCounter(targetValue, element) {
+    if (!element) return;
     let startValue = 0;
     const duration = 1000;
     const stepTime = 20;
