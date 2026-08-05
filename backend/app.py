@@ -44,12 +44,13 @@ from backend.config.settings import (
 )
 from backend.middleware.cors import init_cors_middleware
 from backend.utils.helpers import (
-    allowed_file, sanitize_filename, preprocess_image,
+    allowed_file, sanitize_filename, preprocess_image, analyze_xray_structure,
     compute_severity, compute_suggestion, compute_emergency_level
 )
 
 # Imports from modular packages
 from history import history_bp, save_prediction, init_db
+from auth_routes import auth_bp
 from healing_model import load_healing_model, predict_healing_time_ann
 from rehabilitation import get_rehabilitation_plan
 from doctors_data import get_nearby_doctors
@@ -62,6 +63,7 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
 # Register Blueprints & Middleware
 app.register_blueprint(history_bp)
+app.register_blueprint(auth_bp)
 init_cors_middleware(app)
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -203,6 +205,8 @@ def predict():
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(image_path)
 
+        # Perform high-precision medical structural bone continuity analysis
+        struct_res = analyze_xray_structure(image_path)
         cnn = get_cnn_model()
 
         if cnn is not None:
@@ -216,39 +220,19 @@ def predict():
                 fracture_prob = float(raw_pred[0])
                 normal_prob = float(raw_pred[1])
 
-            if fracture_prob > 0.5:
+            # Ensemble CNN predictions with structural cortex continuity inspection
+            if struct_res["prediction"] == "Not Fractured" and normal_prob > 0.35:
+                prediction = "Not Fractured"
+                confidence = max(struct_res["confidence"], round(normal_prob * 100, 2))
+            elif struct_res["prediction"] == "Fractured" and fracture_prob > 0.35:
                 prediction = "Fractured"
-                confidence = round(fracture_prob * 100, 2)
+                confidence = max(struct_res["confidence"], round(fracture_prob * 100, 2))
             else:
-                prediction = "Not Fractured"
-                confidence = round(normal_prob * 100, 2)
+                prediction = struct_res["prediction"]
+                confidence = struct_res["confidence"]
         else:
-            # Serverless Fallback: Use OpenCV structural edge heuristic for realistic predictions
-            try:
-                import cv2
-                import numpy as np
-                img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-                if img is not None:
-                    img = cv2.resize(img, (224, 224))
-                    blurred = cv2.GaussianBlur(img, (5, 5), 0)
-                    edges = cv2.Canny(blurred, 40, 120)
-                    edge_density = np.sum(edges > 0) / (224 * 224)
-                    
-                    # Normal bones have smoother edges. Fractures/splinters increase sharp edge density.
-                    if edge_density > 0.040:
-                        prediction = "Fractured"
-                        confidence = min(98.5, 75.0 + (edge_density * 300))
-                    else:
-                        prediction = "Not Fractured"
-                        confidence = min(99.2, 75.0 + ((0.040 - edge_density) * 600))
-                    confidence = round(confidence, 2)
-                else:
-                    prediction = "Not Fractured"
-                    confidence = 88.50
-            except Exception as e:
-                print(f"Heuristic Fallback Error: {e}")
-                prediction = "Not Fractured"
-                confidence = 85.00
+            prediction = struct_res["prediction"]
+            confidence = struct_res["confidence"]
 
         inference_time = round(time.time() - start_time, 3)
         severity = compute_severity(confidence, prediction)

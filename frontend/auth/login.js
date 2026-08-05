@@ -6,7 +6,7 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
   try {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   } catch (e) {
-    console.warn("Supabase init error, using local session fallback:", e);
+    console.warn("Supabase init notice:", e);
   }
 }
 
@@ -29,14 +29,21 @@ function getUserId(email) {
 async function checkExistingSession() {
   const localUser = localStorage.getItem("drx_user");
   if (localUser) {
-    window.location.href = "/dashboard";
-    return;
+    try {
+      const parsed = JSON.parse(localUser);
+      if (parsed && parsed.email) {
+        window.location.href = "/dashboard";
+        return;
+      }
+    } catch (e) {
+      localStorage.removeItem("drx_user");
+    }
   }
 
   if (supabaseClient) {
     try {
       const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session) {
+      if (session && session.user) {
         const uEmail = session.user.email;
         localStorage.setItem("drx_user", JSON.stringify({
           id: getUserId(uEmail),
@@ -112,50 +119,58 @@ async function handleAuthSubmit(e) {
   btnText.style.opacity = "0.5";
 
   try {
-    const userId = getUserId(email);
-    let userObj = {
-      id: userId,
+    const endpoint = currentMode === "signup" ? "/api/auth/register" : "/api/auth/login";
+    const payload = {
+      email: email,
+      password: password,
+      name: fullName
+    };
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const resData = await response.json().catch(() => ({ status: "error", message: "Server response error." }));
+
+    if (!response.ok || resData.status !== "success") {
+      throw new Error(resData.message || (currentMode === "signup" ? "Failed to create account." : "Invalid email or password."));
+    }
+
+    // Sync with Supabase if client is initialized
+    if (supabaseClient && SUPABASE_URL.indexOf("demo-project") === -1) {
+      if (currentMode === "signup") {
+        await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } }
+        }).catch(err => console.log("Supabase signup sync notice:", err));
+      } else {
+        await supabaseClient.auth.signInWithPassword({ email, password })
+          .catch(err => console.log("Supabase signin sync notice:", err));
+      }
+    }
+
+    const authUser = resData.user || {
+      id: getUserId(email),
       email: email,
       name: fullName || email.split('@')[0] || "Doctor"
     };
 
-    if (supabaseClient && SUPABASE_URL.indexOf("demo-project") === -1) {
-      if (currentMode === "signup") {
-        try {
-          const { data, error } = await supabaseClient.auth.signUp({
-            email,
-            password,
-            options: { data: { full_name: fullName } }
-          });
-          if (data && data.user && data.user.user_metadata?.full_name) {
-            userObj.name = data.user.user_metadata.full_name;
-          }
-        } catch (supErr) {
-          console.log("Supabase signup sync notice:", supErr);
-        }
-        showAlert("Account created successfully! Redirecting to dashboard...", false);
-      } else {
-        try {
-          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-          if (data && data.user && data.user.user_metadata?.full_name) {
-            userObj.name = data.user.user_metadata.full_name;
-          }
-        } catch (supErr) {
-          console.log("Supabase signin sync notice:", supErr);
-        }
-        showAlert("Successfully signed in! Redirecting to dashboard...", false);
-      }
-    } else {
-      await new Promise(r => setTimeout(r, 400));
-      showAlert("Authentication successful! Redirecting...", false);
-    }
+    showAlert(
+      currentMode === "signup"
+        ? "Account created successfully! Redirecting to dashboard..."
+        : "Successfully authenticated! Redirecting to dashboard...",
+      false
+    );
 
-    if (userObj) {
-      localStorage.setItem("drx_user", JSON.stringify(userObj));
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 600);
-    }
+    localStorage.setItem("drx_user", JSON.stringify(authUser));
+
+    setTimeout(() => {
+      window.location.href = "/dashboard";
+    }, 700);
+
   } catch (err) {
     console.error("Auth error:", err);
     showAlert(err.message || "Authentication failed. Please check your credentials.");
