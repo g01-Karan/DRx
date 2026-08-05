@@ -16,10 +16,12 @@ let currentUserId = "";
 
 function savePredictionToVault(record) {
   try {
-    const raw = localStorage.getItem("drx_history_vault");
+    const userId = record.user_id || currentUserId || "default";
+    const key = "drx_history_vault_" + userId;
+    const raw = localStorage.getItem(key);
     const list = raw ? JSON.parse(raw) : [];
     list.unshift(record);
-    localStorage.setItem("drx_history_vault", JSON.stringify(list));
+    localStorage.setItem(key, JSON.stringify(list));
   } catch (e) {
     console.warn("Vault save prediction notice:", e);
   }

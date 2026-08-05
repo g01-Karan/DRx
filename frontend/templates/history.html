@@ -255,7 +255,8 @@
 
       let vaultRecords = [];
       try {
-        const rawVault = localStorage.getItem("drx_history_vault");
+        const key = "drx_history_vault_" + (currentUserId || "default");
+        const rawVault = localStorage.getItem(key);
         if (rawVault) vaultRecords = JSON.parse(rawVault);
       } catch (e) {}
 
@@ -374,11 +375,12 @@
 
       // Remove from client vault
       try {
-        const rawVault = localStorage.getItem("drx_history_vault");
+        const key = "drx_history_vault_" + (currentUserId || "default");
+        const rawVault = localStorage.getItem(key);
         if (rawVault) {
           let vault = JSON.parse(rawVault);
           vault = vault.filter(r => String(r.id) !== String(id));
-          localStorage.setItem("drx_history_vault", JSON.stringify(vault));
+          localStorage.setItem(key, JSON.stringify(vault));
         }
       } catch (e) {}
 
