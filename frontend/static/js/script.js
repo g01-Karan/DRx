@@ -14,6 +14,17 @@ let currentPredictionState = { prediction: "Fractured", severity: "Moderate", co
 
 let currentUserId = "";
 
+function savePredictionToVault(record) {
+  try {
+    const raw = localStorage.getItem("drx_history_vault");
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift(record);
+    localStorage.setItem("drx_history_vault", JSON.stringify(list));
+  } catch (e) {
+    console.warn("Vault save prediction notice:", e);
+  }
+}
+
 window.handleLogout = function () {
   localStorage.removeItem("drx_user");
   window.location.href = "/";
@@ -375,6 +386,20 @@ document.addEventListener("DOMContentLoaded", () => {
             severity: data.severity,
             confidence: data.confidence,
           };
+          savePredictionToVault({
+            id: Date.now(),
+            user_id: currentUserId,
+            patient_name: document.getElementById("patientNameInput")?.value || "Unknown",
+            prediction_date: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            bone_type: "Bone X-ray",
+            prediction: data.prediction,
+            confidence: data.confidence,
+            severity: data.severity,
+            emergency_level: data.emergency_level,
+            inference_time: data.inference_time,
+            image_path: data.image_url,
+            heatmap_path: data.heatmap_url
+          });
           displayResults(data);
           loadDashboardStats();
           loadCharts();

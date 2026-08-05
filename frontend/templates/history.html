@@ -234,28 +234,71 @@
       document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('en-US', options);
     }
 
+    let allLoadedRecords = [];
+
     async function loadHistory() {
-      const search = document.getElementById('historySearch').value;
+      const search = (document.getElementById('historySearch').value || "").toLowerCase().strip?.() || (document.getElementById('historySearch').value || "").toLowerCase();
       const filter = document.getElementById('historyFilter').value;
       const sort = document.getElementById('historySort').value;
       const order = document.getElementById('historySortOrder').value;
 
-      const params = new URLSearchParams({
-        search, filter, sort, order,
-        page: currentPage,
-        per_page: perPage
-      });
-
+      let serverRecords = [];
       try {
-        const response = await fetch(`/api/history?${params}`, {
+        const response = await fetch(`/api/history?search=${encodeURIComponent(search)}&filter=${encodeURIComponent(filter)}&sort=${sort}&order=${order}&page=1&per_page=999`, {
           headers: { 'X-User-ID': currentUserId }
         });
         const data = await response.json();
-        renderTable(data.records);
-        renderPagination(data.total_pages, data.current_page);
+        if (data && data.records) serverRecords = data.records;
       } catch (error) {
-        console.error('Failed to load history:', error);
+        console.warn('Backend history fetch notice:', error);
       }
+
+      let vaultRecords = [];
+      try {
+        const rawVault = localStorage.getItem("drx_history_vault");
+        if (rawVault) vaultRecords = JSON.parse(rawVault);
+      } catch (e) {}
+
+      const recordMap = new Map();
+      serverRecords.forEach(r => recordMap.set(String(r.id || r.prediction_date), r));
+      vaultRecords.forEach(r => {
+        if (r) {
+          const key = String(r.id || r.prediction_date);
+          if (!recordMap.has(key)) {
+            recordMap.set(key, r);
+          }
+        }
+      });
+
+      let records = Array.from(recordMap.values());
+
+      if (search) {
+        records = records.filter(r => 
+          (r.patient_name || "").toLowerCase().includes(search) || 
+          (r.prediction || "").toLowerCase().includes(search) ||
+          (r.severity || "").toLowerCase().includes(search)
+        );
+      }
+
+      if (filter) {
+        records = records.filter(r => r.prediction === filter || r.severity === filter);
+      }
+
+      records.sort((a, b) => {
+        let valA = a[sort] || a.id || 0;
+        let valB = b[sort] || b.id || 0;
+        if (order === 'DESC') return valA < valB ? 1 : -1;
+        return valA > valB ? 1 : -1;
+      });
+
+      allLoadedRecords = records;
+
+      const totalPages = Math.ceil(records.length / perPage) || 1;
+      const startIndex = (currentPage - 1) * perPage;
+      const pageRecords = records.slice(startIndex, startIndex + perPage);
+
+      renderTable(pageRecords);
+      renderPagination(totalPages, currentPage);
     }
 
     function renderTable(records) {
@@ -276,21 +319,21 @@
           <td><span class="bone-tag">${r.bone_type}</span></td>
           <td><span class="table-pill ${r.prediction === 'Fractured' ? 'fractured' : 'normal'}">${r.prediction}</span></td>
           <td>${r.confidence}%</td>
-          <td><span class="severity-badge ${r.severity.toLowerCase().replace('/', '')}">${r.severity}</span></td>
+          <td><span class="severity-badge ${(r.severity || 'NA').toLowerCase().replace('/', '')}">${r.severity}</span></td>
           <td>
-            <button class="action-btn view" onclick="viewReport(${r.id})" title="View Report">
+            <button class="action-btn view" onclick="viewReport('${r.id}')" title="View Report">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.573 16.49 16.638 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
-            <button class="action-btn rehab" onclick="openPatientRehab(${r.id})" title="View Rehab Plan">
+            <button class="action-btn rehab" onclick="openPatientRehab('${r.id}')" title="View Rehab Plan">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
               </svg>
             </button>
-            <button class="action-btn delete" onclick="deleteRecord(${r.id})" title="Delete Record">
+            <button class="action-btn delete" onclick="deleteRecord('${r.id}')" title="Delete Record">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
               </svg>
@@ -327,19 +370,31 @@
           method: 'DELETE',
           headers: { 'X-User-ID': currentUserId }
         });
-        loadHistory();
-      } catch (error) {
-        alert('Failed to delete record.');
-      }
+      } catch (error) {}
+
+      // Remove from client vault
+      try {
+        const rawVault = localStorage.getItem("drx_history_vault");
+        if (rawVault) {
+          let vault = JSON.parse(rawVault);
+          vault = vault.filter(r => String(r.id) !== String(id));
+          localStorage.setItem("drx_history_vault", JSON.stringify(vault));
+        }
+      } catch (e) {}
+
+      loadHistory();
     }
 
     async function viewReport(id) {
       try {
-        const response = await fetch(`/api/history?search=&filter=&sort=id&order=ASC&page=1&per_page=9999`, {
-          headers: { 'X-User-ID': currentUserId }
-        });
-        const data = await response.json();
-        const record = data.records.find(r => r.id === id);
+        let record = allLoadedRecords.find(r => String(r.id) === String(id));
+        if (!record) {
+          const response = await fetch(`/api/history?search=&filter=&sort=id&order=ASC&page=1&per_page=9999`, {
+            headers: { 'X-User-ID': currentUserId }
+          });
+          const data = await response.json();
+          record = (data.records || []).find(r => String(r.id) === String(id));
+        }
         if (!record) return;
 
         const modal = document.getElementById('reportModal');
