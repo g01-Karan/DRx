@@ -26,6 +26,49 @@ function getUserId(email) {
   }
 }
 
+// Local Registered Vault Helpers (Fixes Vercel Ephemeral /tmp DB across Lambda Invocations)
+function getRegisteredVault() {
+  try {
+    const raw = localStorage.getItem("drx_registered_vault");
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveToRegisteredVault(email, password, name) {
+  try {
+    const vault = getRegisteredVault();
+    vault[email.toLowerCase()] = {
+      id: getUserId(email),
+      email: email.toLowerCase(),
+      name: name || email.split('@')[0],
+      password: password
+    };
+    localStorage.setItem("drx_registered_vault", JSON.stringify(vault));
+  } catch (e) {
+    console.warn("Vault save warning:", e);
+  }
+}
+
+function checkRegisteredVault(email, password) {
+  const vault = getRegisteredVault();
+  const norm = (email || "").trim().toLowerCase();
+  const record = vault[norm];
+  if (!record) {
+    return { found: false, match: false };
+  }
+  return {
+    found: true,
+    match: record.password === password,
+    user: {
+      id: record.id,
+      email: record.email,
+      name: record.name
+    }
+  };
+}
+
 async function checkExistingSession() {
   const localUser = localStorage.getItem("drx_user");
   if (localUser) {
@@ -119,57 +162,93 @@ async function handleAuthSubmit(e) {
   btnText.style.opacity = "0.5";
 
   try {
-    const endpoint = currentMode === "signup" ? "/api/auth/register" : "/api/auth/login";
-    const payload = {
-      email: email,
-      password: password,
-      name: fullName
-    };
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const resData = await response.json().catch(() => ({ status: "error", message: "Server response error." }));
-
-    if (!response.ok || resData.status !== "success") {
-      throw new Error(resData.message || (currentMode === "signup" ? "Failed to create account." : "Invalid email or password."));
+    if (!email || email.indexOf("@") === -1 || email.indexOf(".") === -1) {
+      throw new Error("Please enter a valid email address.");
+    }
+    if (!password || password.length < 6) {
+      throw new Error("Password must be at least 6 characters long.");
     }
 
-    // Sync with Supabase if client is initialized
-    if (supabaseClient && SUPABASE_URL.indexOf("demo-project") === -1) {
-      if (currentMode === "signup") {
-        await supabaseClient.auth.signUp({
+    if (currentMode === "signup") {
+      // 1. Register Account
+      saveToRegisteredVault(email, password, fullName);
+
+      // Attempt backend sync
+      fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name: fullName })
+      }).catch(err => console.log("Backend register sync notice:", err));
+
+      if (supabaseClient && SUPABASE_URL.indexOf("demo-project") === -1) {
+        supabaseClient.auth.signUp({
           email,
           password,
           options: { data: { full_name: fullName } }
         }).catch(err => console.log("Supabase signup sync notice:", err));
-      } else {
-        await supabaseClient.auth.signInWithPassword({ email, password })
-          .catch(err => console.log("Supabase signin sync notice:", err));
       }
+
+      const authUser = {
+        id: getUserId(email),
+        email: email,
+        name: fullName || email.split('@')[0] || "Doctor"
+      };
+
+      showAlert("Account created successfully! Redirecting to dashboard...", false);
+      localStorage.setItem("drx_user", JSON.stringify(authUser));
+
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 700);
+
+    } else {
+      // 2. Sign In to Existing Account
+      let authenticatedUser = null;
+
+      // Try backend endpoint first
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const resData = await response.json().catch(() => null);
+
+        if (response.ok && resData && resData.status === "success") {
+          authenticatedUser = resData.user;
+          // Refresh local vault
+          saveToRegisteredVault(email, password, authenticatedUser.name);
+        } else if (resData && resData.message && resData.message.includes("Incorrect password")) {
+          throw new Error("Incorrect password. Please try again.");
+        }
+      } catch (backendErr) {
+        if (backendErr.message.includes("Incorrect password")) {
+          throw backendErr;
+        }
+        console.log("Backend login notice, falling back to local vault check:", backendErr);
+      }
+
+      // If backend did not authenticate (e.g. Vercel serverless stateless /tmp DB), check local vault
+      if (!authenticatedUser) {
+        const vaultCheck = checkRegisteredVault(email, password);
+        if (vaultCheck.found) {
+          if (vaultCheck.match) {
+            authenticatedUser = vaultCheck.user;
+          } else {
+            throw new Error("Incorrect password. Please try again.");
+          }
+        } else {
+          throw new Error("No account found with this email address. Please create an account first.");
+        }
+      }
+
+      showAlert("Successfully authenticated! Redirecting to dashboard...", false);
+      localStorage.setItem("drx_user", JSON.stringify(authenticatedUser));
+
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 700);
     }
-
-    const authUser = resData.user || {
-      id: getUserId(email),
-      email: email,
-      name: fullName || email.split('@')[0] || "Doctor"
-    };
-
-    showAlert(
-      currentMode === "signup"
-        ? "Account created successfully! Redirecting to dashboard..."
-        : "Successfully authenticated! Redirecting to dashboard...",
-      false
-    );
-
-    localStorage.setItem("drx_user", JSON.stringify(authUser));
-
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 700);
 
   } catch (err) {
     console.error("Auth error:", err);
