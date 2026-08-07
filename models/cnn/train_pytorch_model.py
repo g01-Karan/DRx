@@ -125,8 +125,6 @@ def train_model():
     print(f"Dataset Counts -> Train: {len(train_ds)}, Val: {len(val_ds)}, Test: {len(test_ds)}")
 
     model = get_mobilenet_model().to(DEVICE)
-    torch.save(model.state_dict(), SAVED_MODEL_PATH)
-    print(f" -> Initialized MobileNetV2 model saved to '{SAVED_MODEL_PATH}'")
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
 
