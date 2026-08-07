@@ -2,76 +2,91 @@
 ==============================================================================
 Binary Bone Fracture Detection - Image Prediction Script
 ==============================================================================
-This script loads the trained best CNN model (saved_model/best_model.keras),
-takes an input X-ray image path from the user, processes it, and predicts
-whether the bone is Fractured or Not Fractured along with confidence percentage.
+Loads the trained CNN model (best_model.pt or best_model.keras),
+takes an input X-ray image path, processes it, and predicts
+whether the bone is Fractured or Not Fractured with confidence.
 ==============================================================================
 """
 
 import os
+import sys
 import numpy as np
-import tensorflow as tf
-from PIL import ImageFile
+from PIL import Image, ImageFile
 
-# Allow PIL to load truncated/damaged images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PYTORCH_MODEL_PATH = os.path.join(BASE_DIR, "models", "cnn", "best_model.pt")
+KERAS_MODEL_PATH = os.path.join(BASE_DIR, "models", "cnn", "best_model.keras")
 
-# Path to saved model checkpoint
-MODEL_PATH = os.path.join("saved_model", "best_model.keras")
+def predict_single_image(image_path):
+    if not os.path.exists(image_path):
+        print(f"Error: Image file '{image_path}' does not exist.")
+        return
+
+    # 1. Try PyTorch Model
+    if os.path.exists(PYTORCH_MODEL_PATH):
+        try:
+            import torch
+            sys.path.append(BASE_DIR)
+            from models.cnn.train_pytorch_model import get_mobilenet_model, DEVICE
+            from backend.utils.helpers import preprocess_image
+
+            model = get_mobilenet_model().to(DEVICE)
+            model.load_state_dict(torch.load(PYTORCH_MODEL_PATH, map_location=DEVICE))
+            model.eval()
+
+            img_tensor = preprocess_image(image_path)
+            input_tensor = torch.tensor(img_tensor, dtype=torch.float32).to(DEVICE)
+
+            with torch.no_grad():
+                output_logit = model(input_tensor).squeeze().item()
+                normal_prob = float(torch.sigmoid(torch.tensor(output_logit)).item())
+
+            if normal_prob >= 0.5:
+                confidence = normal_prob * 100.0
+                print("\nPrediction: Not Fractured")
+                print(f"Confidence: {confidence:.2f}%")
+            else:
+                confidence = (1.0 - normal_prob) * 100.0
+                print("\nPrediction: Fractured Bone")
+                print(f"Confidence: {confidence:.2f}%")
+            return
+        except Exception as err:
+            print(f"PyTorch prediction error: {err}")
+
+    # 2. Try Keras Model
+    if os.path.exists(KERAS_MODEL_PATH):
+        try:
+            import tensorflow as tf
+            model = tf.keras.models.load_model(KERAS_MODEL_PATH)
+            img = Image.open(image_path).convert("RGB").resize((224, 224))
+            arr = np.array(img, dtype=np.float32) / 255.0
+            input_tensor = np.expand_dims(arr, axis=0)
+
+            prediction = model.predict(input_tensor, verbose=0)
+            output_value = float(prediction[0][0])
+
+            if output_value < 0.5:
+                confidence = (1.0 - output_value) * 100.0
+                print("\nPrediction: Fractured Bone")
+                print(f"Confidence: {confidence:.2f}%")
+            else:
+                confidence = output_value * 100.0
+                print("\nPrediction: Not Fractured")
+                print(f"Confidence: {confidence:.2f}%")
+            return
+        except Exception as err:
+            print(f"Keras prediction error: {err}")
+
+    print("Error: No trained model file found. Please run 'python models/cnn/train_pytorch_model.py' first.")
 
 def main():
-    # 1. Check if saved model exists
-    if not os.path.exists(MODEL_PATH):
-        print(f"Error: Trained model file not found at '{MODEL_PATH}'.")
-        print("Please run 'python train_model.py' first to train and save the model.")
-        return
-
-    # 2. Load trained Keras model
-    print("Loading trained model...")
-    model = tf.keras.models.load_model(MODEL_PATH)
-    print("Model loaded successfully!\n")
-
-    # 3. Ask user for image path
-    image_path = input("Enter Image Path: ").strip().strip('"').strip("'")
-
-    # 4. Check if image file exists
-    if not os.path.exists(image_path):
-        print(f"Error: File '{image_path}' does not exist. Please check the path and try again.")
-        return
-
-    try:
-        # 5. Load and preprocess image
-        # Load image and resize to 224x224 target size
-        img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
-        
-        # Convert image to numpy array
-        img_array = tf.keras.preprocessing.image.img_to_array(img)
-        
-        # Normalize pixel values to range [0.0, 1.0] (matching training preprocessing)
-        img_array = img_array / 255.0
-        
-        # Expand dimensions to add batch dimension (1, 224, 224, 3)
-        img_array = np.expand_dims(img_array, axis=0)
-
-        # 6. Predict image class
-        prediction = model.predict(img_array, verbose=0)
-        output_value = float(prediction[0][0])
-
-        # 7. Display prediction and confidence
-        # Keras class_indices: {'fractured': 0, 'not fractured': 1}
-        if output_value < 0.5:
-            confidence = (1.0 - output_value) * 100
-            print("\nPrediction: Fractured Bone")
-            print(f"Confidence: {confidence:.2f}%")
-        else:
-            confidence = output_value * 100
-            print("\nPrediction: Not Fractured")
-            print(f"Confidence: {confidence:.2f}%")
-
-
-    except Exception as e:
-        print(f"An error occurred while processing the image: {e}")
+    if len(sys.argv) > 1:
+        image_path = sys.argv[1]
+    else:
+        image_path = input("Enter Image Path: ").strip().strip('"').strip("'")
+    predict_single_image(image_path)
 
 if __name__ == "__main__":
     main()

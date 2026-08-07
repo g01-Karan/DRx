@@ -38,6 +38,7 @@ DB_PATH = os.path.join(DB_DIR, 'predictions.db')
 
 # Model Paths
 SAVED_CNN_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'cnn', 'best_model.keras')
+SAVED_PYTORCH_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'cnn', 'best_model.pt')
 SAVED_ANN_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'ann', 'healing_ann.keras')
 SAVED_ANN_SCALER_PATH = os.path.join(BASE_DIR, 'models', 'ann', 'healing_scaler.json')
 

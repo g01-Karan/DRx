@@ -40,12 +40,12 @@ sys.path.extend([
 from backend.config.settings import (
     SECRET_KEY, DEBUG, PORT, STATIC_FOLDER, TEMPLATE_FOLDER,
     LANDING_FOLDER, AUTH_FOLDER, UPLOAD_FOLDER, SAVED_CNN_MODEL_PATH,
-    MAX_CONTENT_LENGTH
+    SAVED_PYTORCH_MODEL_PATH, MAX_CONTENT_LENGTH
 )
 from backend.middleware.cors import init_cors_middleware
 from backend.utils.helpers import (
-    allowed_file, sanitize_filename, preprocess_image, analyze_xray_structure,
-    compute_severity, compute_suggestion, compute_emergency_level
+    allowed_file, sanitize_filename, preprocess_image, preprocess_image_keras,
+    analyze_xray_structure, compute_severity, compute_suggestion, compute_emergency_level
 )
 
 # Imports from modular packages
@@ -73,25 +73,42 @@ init_db()
 
 # Lazy Model Loader References
 _cnn_model = None
+_cnn_model_type = None
 _healing_ann_model = None
 
 
 def get_cnn_model():
-    """Lazy load CNN model for fast cold starts."""
-    global _cnn_model
+    """Lazy load PyTorch or Keras CNN model for fast cold starts."""
+    global _cnn_model, _cnn_model_type
     if _cnn_model is None:
+        # 1. Try loading PyTorch Model (.pt)
+        if os.path.exists(SAVED_PYTORCH_MODEL_PATH):
+            try:
+                import torch
+                from models.cnn.train_pytorch_model import get_mobilenet_model, DEVICE
+                model = get_mobilenet_model().to(DEVICE)
+                model.load_state_dict(torch.load(SAVED_PYTORCH_MODEL_PATH, map_location=DEVICE))
+                model.eval()
+                _cnn_model = model
+                _cnn_model_type = "pytorch"
+                print(f"Loaded trained PyTorch MobileNetV2 model from {SAVED_PYTORCH_MODEL_PATH}")
+                return _cnn_model, _cnn_model_type
+            except Exception as err:
+                print(f"PyTorch CNN Model load error: {err}")
+
+        # 2. Try loading TensorFlow Keras Model (.keras)
         if os.path.exists(SAVED_CNN_MODEL_PATH):
             try:
                 import tensorflow as tf
                 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-                print(f"Loading trained CNN model from {SAVED_CNN_MODEL_PATH}...")
                 _cnn_model = tf.keras.models.load_model(SAVED_CNN_MODEL_PATH)
-                print("CNN Model loaded successfully!")
+                _cnn_model_type = "keras"
+                print(f"Loaded trained Keras CNN model from {SAVED_CNN_MODEL_PATH}")
+                return _cnn_model, _cnn_model_type
             except Exception as err:
-                print(f"CNN Model load error: {err}")
-        else:
-            print(f"Warning: CNN Model file not found at {SAVED_CNN_MODEL_PATH}")
-    return _cnn_model
+                print(f"Keras CNN Model load error: {err}")
+
+    return _cnn_model, _cnn_model_type
 
 
 def get_ann_model():
@@ -205,31 +222,39 @@ def predict():
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(image_path)
 
-        # Perform high-precision medical structural bone continuity analysis
+        # Perform structural bone continuity analysis
         struct_res = analyze_xray_structure(image_path)
-        cnn = get_cnn_model()
+        cnn, model_type = get_cnn_model()
 
         if cnn is not None:
-            input_tensor = preprocess_image(image_path)
-            raw_pred = cnn.predict(input_tensor, verbose=0)[0]
+            if model_type == "pytorch":
+                import torch
+                from models.cnn.train_pytorch_model import DEVICE
+                img_tensor = preprocess_image(image_path)  # shape (1, 3, 224, 224)
+                with torch.no_grad():
+                    input_t = torch.tensor(img_tensor, dtype=torch.float32).to(DEVICE)
+                    output_logit = cnn(input_t).squeeze().item()
+                    normal_prob = float(torch.sigmoid(torch.tensor(output_logit)).item())
+                    fracture_prob = 1.0 - normal_prob
+            elif model_type == "keras":
+                input_tensor = preprocess_image_keras(image_path)  # shape (1, 224, 224, 3)
+                raw_pred = cnn.predict(input_tensor, verbose=0)[0]
+                if len(raw_pred) == 1:
+                    normal_prob = float(raw_pred[0])
+                    fracture_prob = 1.0 - normal_prob
+                else:
+                    fracture_prob = float(raw_pred[0])
+                    normal_prob = float(raw_pred[1])
 
-            if len(raw_pred) == 1:
-                normal_prob = float(raw_pred[0])
-                fracture_prob = 1.0 - normal_prob
-            else:
-                fracture_prob = float(raw_pred[0])
-                normal_prob = float(raw_pred[1])
-
-            # Ensemble CNN predictions with structural cortex continuity inspection
-            if struct_res["prediction"] == "Not Fractured" and normal_prob > 0.35:
+            # Binary Class mapping: 
+            # normal_prob >= 0.5 -> "Not Fractured"
+            # normal_prob < 0.5  -> "Fractured"
+            if normal_prob >= 0.5:
                 prediction = "Not Fractured"
-                confidence = max(struct_res["confidence"], round(normal_prob * 100, 2))
-            elif struct_res["prediction"] == "Fractured" and fracture_prob > 0.35:
-                prediction = "Fractured"
-                confidence = max(struct_res["confidence"], round(fracture_prob * 100, 2))
+                confidence = round(normal_prob * 100.0, 2)
             else:
-                prediction = struct_res["prediction"]
-                confidence = struct_res["confidence"]
+                prediction = "Fractured"
+                confidence = round(fracture_prob * 100.0, 2)
         else:
             prediction = struct_res["prediction"]
             confidence = struct_res["confidence"]

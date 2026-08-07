@@ -88,5 +88,24 @@ class BackendTestSuite(unittest.TestCase):
         response = self.app.get('/api/history')
         self.assertEqual(response.status_code, 200)
 
+    def test_09_predict_image_api(self):
+        """Test primary prediction endpoint POST /predict"""
+        import io
+        import glob
+        test_images = glob.glob(os.path.join(BASE_DIR, 'Bone_Fracture_Dataset', 'test', '*', '*'))
+        if test_images:
+            sample_path = test_images[0]
+            with open(sample_path, 'rb') as f:
+                data = {
+                    'file': (io.BytesIO(f.read()), os.path.basename(sample_path)),
+                    'patient_name': 'Test Patient'
+                }
+                response = self.app.post('/predict', data=data, content_type='multipart/form-data')
+                self.assertEqual(response.status_code, 200)
+                res_json = response.get_json()
+                self.assertEqual(res_json['status'], 'success')
+                self.assertIn('prediction', res_json)
+                self.assertIn('confidence', res_json)
+
 if __name__ == '__main__':
     unittest.main()
